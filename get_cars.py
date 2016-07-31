@@ -13,11 +13,13 @@ from time import gmtime, strftime
 
 def requestator(url):
     print url
-    req = Request(url)
+    #req = Request(url)
     try:
+        req = Request(url)
         response = urlopen(req)
     except URLError as e:
         status = 'error'
+        tree = 'error'
         if hasattr(e, 'reason'):
             print('We failed to reach a server.')
             print('Reason: ', e.reason)
