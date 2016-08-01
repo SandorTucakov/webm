@@ -1,15 +1,22 @@
 import pandas as pd
 import numpy as np
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
 import urllib
 from urllib2 import Request, urlopen
 from urllib2 import URLError
 import time
+import requests
 
 from lxml import etree
 import urllib2
 from unidecode import unidecode
 from time import gmtime, strftime
+import copy
+# import sys
+# sys.path.append('./webm/')
+# import get_cars
+
+
 
 def requestator(url):
     print url
@@ -34,6 +41,17 @@ def requestator(url):
     return status, tree
 
 
+def fipeitor(url):
+    status, arvore = requestator(url)
+    arv = arvore.xpath('//p[@class="size-21 bold alinha-preco show"]/text()')
+    if arv:
+        val = arv[0]
+    else:
+        val = 0
+
+    return val
+
+
 def get_cars(links, filename='./webm/results'):
     campos = dict(
         estado='//head/meta[@name="wm.dt_estado"]/@content',
@@ -54,51 +72,83 @@ def get_cars(links, filename='./webm/results'):
         ano='(//div[@class="dis-tc col-4 last valign-m"]//strong/text())[1]',
         km='(//div[@class="dis-tc col-4 last valign-m"]//strong/text())[2]',
         comb='(//div[@class="dis-tc col-4 last valign-m"]//strong/text())[3]',
-        # cambio='(//div[@class="dis-tc col-4 last valign-m"]//strong/text())[4]',
         final_placa='(//div[@class="dis-tc col-4 last valign-m"]//strong/text())[5]',
         portas='(//div[@class="col-3 pad-h_gutter-tb"]//text())[12]',
     )
 
-    # links = pd.read_csv(links_filename, header=None)
+    output_ini = dict(
+        link='',
+        download_date='',
+        ativo='',
+        estado='',
+        cidade='',
+        marca='',
+        dt_mod='',
+        combustivel='',
+        cambio='',
+        codigo='',
+        cor='',
+        preco='',
+        carroceria='',
+        anomod='',
+        tipo='',
+        tpag='',
+        tipoc='',
+        idk='',
+        ano='',
+        km='',
+        comb='',
+        final_placa='',
+        portas='',
+        FIPE='',
+        FIPE_data='',
+        FIPE_link='',
+
+    )
+
+    ### Get FIPE
+    previous = pd.read_csv(filename+'.csv', sep=';')
+    previous['FIPE_INDEX'] = previous.ix[:, 0].apply(str) + ' - ' + previous.ix[:, 10].apply(str)
+
     results = []
     count = 0
     for li in links:
+        output = copy.deepcopy(output_ini)
         status, tree = requestator(li)
-        chaves = []
-        vals = []
-        chaves.append('link')
-        vals.append(li)
+        output['link'] = li
 
-        #time
-        chaves.append('download_date')
-        vals.append(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        ano = gmtime().tm_year
+        mes = gmtime().tm_mon
+        #dia = gmtime().tm_year
+        output['download_date'] = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        output['FIPE_data'] = ano*100 + mes
 
-        if status == 'ok':
-            #htmlparser = etree.HTMLParser()
-            #tree = etree.parse(response, htmlparser)
+        ativo = True
+        desativado = tree.xpath("(//div[@class='size-xbigger bold mrg-gutter-b']//text())")
+        if desativado:
+            ativo = unidecode(desativado[0]) != 'Anuncio Desativado.'
 
+        if status == 'ok' and ativo:
             for key, value in campos.iteritems():
                 parsed = None
                 parsed = tree.xpath(value)
                 if parsed:
-                    chaves.append(key)
-                    vals.append(unidecode(parsed[0]))
+                    #chaves.append(key)
+                    output[key] = unidecode(parsed[0])
+                    #vals.append(unidecode(parsed[0]))
 
             ### FIPE
             l1 = tree.xpath('//div[@class="pad-oh_gutter-tb pad-l-1 pad-r-1 bg-gray-light2"]//@href')
-            if l1:
-                status, tree1 = requestator(l1[0])
-                chaves.append('FIPE')
-                arv = tree1.xpath('//p[@class="size-21 bold alinha-preco show"]/text()')
-                if arv:
-                    vals.append(arv[0])
-                else:
-                    vals.append('0')
-            else:
-                chaves.append('FIPE')
-                vals.append('0')
 
-            results.append(pd.DataFrame(vals, index=chaves).T)
+            if l1:
+                output['FIPE_link'] = l1[0]
+                output['FIPE'] = fipeitor(l1[0])
+
+            else:
+                output['FIPE'] = '0'
+                output['FIPE_link'] = '-'
+
+        results.append(pd.DataFrame.from_dict(output, orient='index').T)
 
         count += 1
         if count % 10 == 0 or li == links[-1]:
@@ -112,3 +162,20 @@ def get_cars(links, filename='./webm/results'):
             results = []
 
     return final
+
+
+def requestator_2(url):
+    session = requests.Session()
+    response = session.get(url)
+    # parse the search page using SoupStrainer and lxml
+    strainer = SoupStrainer('div')
+    soup = BeautifulSoup(response.content, 'lxml', parse_only=strainer)
+
+    #req = soup.find('meta', {'name':'wm.dt_cor'})['content']
+    #ss.find('div', {'class': 'pad-oh_gutter-tb pad-l-1 pad-r-1 bg-gray-light2'})
+    return soup
+
+for link in ss.find_all('a', href=re.compile('http://www.webmotors.com.br/tabela-fipe/')):
+    print link['href']
+
+import re
