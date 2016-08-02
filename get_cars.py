@@ -189,7 +189,7 @@ def get_cars(links, filename='./webm/results'):
 
 
 def requestator_2(url):
-
+#if True:
     output_ini = dict(
         link='',
         download_date='',
@@ -217,7 +217,6 @@ def requestator_2(url):
         FIPE='',
         FIPE_data='',
         FIPE_link='',
-
     )
 
     output = copy.deepcopy(output_ini)
@@ -239,45 +238,81 @@ def requestator_2(url):
             print('The server couldn\'t fulfill the request.')
             print('Error code: ', e.code)
 
+        print 'fail'
         return output
 
-    #url = list(links[0])[3]
     response = session.get(url)
-    # parse the search page using SoupStrainer and lxml
-    strainer = SoupStrainer('head')
-    soup = BeautifulSoup(response.content, 'lxml', parse_only=strainer)
-
-    output['estado'] = soup.find('meta', {'name': 'wm.dt_estado'})['content']
-    output['cidade'] = soup.find('meta', {'name': 'wm.dt_cidade'})['content']
-    output['marca'] = soup.find('meta', {'name': 'wm.dt_marca'})['content']
-    output['modelo'] = soup.find('meta', {'name': 'wm.dt_mod'})['content']
-    output['combustivel'] = soup.find('meta', {'name': 'wm.dt_combustivel'})['content']
-    output['cambio'] = soup.find('meta', {'name': 'wm.dt_cambio'})['content']
-    output['codigo'] = soup.find('meta', {'name': 'wm.dt_codanunc'})['content']
-    output['cor'] = soup.find('meta', {'name': 'wm.dt_cor'})['content']
-    output['preco'] = soup.find('meta', {'name': 'wm.dt_prc'})['content']
-    output['carroceria'] = soup.find('meta', {'name': 'wm.dt_carroceria'})['content']
-    output['anomod'] = soup.find('meta', {'name': 'wm.dt_anomod'})['content']
-    output['tipo'] = soup.find('meta', {'name': 'wm.dt_tipoa'})['content']
-    output['tpag'] = soup.find('meta', {'name': 'wm.tpag'})['content']
-    output['tipoc'] = soup.find('meta', {'name': 'wm.dt_tipoc'})['content']
 
     strainer = SoupStrainer('div')
     soup = BeautifulSoup(response.content, 'lxml', parse_only=strainer)
 
-    divTag = soup.find_all('div', {'class': 'dis-tc col-4 last valign-m'})
-    output['ano'] = divTag[0].find_all('strong')[0].text
-    output['km'] = divTag[1].find_all('strong')[0].text
-    output['comb'] = divTag[2].find_all('strong')[0].text
-    output['final_placa'] = divTag[4].find_all('strong')[0].text
-    output['portas'] = int(soup.find_all('div', {'class': 'col-3 pad-h_gutter-tb'})[-1].contents[-1])
+    try:
+        output['ativo'] = unidecode(soup.find('div', {'class': 'size-xbigger bold mrg-gutter-b'}).text)
+    except:
+        output['ativo'] = '1'
+        divTag = soup.find_all('div', {'class': 'dis-tc col-4 last valign-m'})
+        output['ano'] = divTag[0].find_all('strong')[0].text
+        output['km'] = divTag[1].find_all('strong')[0].text
+        output['comb'] = divTag[2].find_all('strong')[0].text
+        output['final_placa'] = divTag[4].find_all('strong')[0].text
+        output['portas'] = int(soup.find_all('div', {'class': 'col-3 pad-h_gutter-tb'})[-1].contents[-1])
 
-    for link in soup.find_all('a', href=re.compile('http://www.webmotors.com.br/tabela-fipe/')):
-        output['FIPE_link'] = link['href']
+        for link in soup.find_all('a', href=re.compile('http://www.webmotors.com.br/tabela-fipe/')):
+            output['FIPE_link'] = link['href']
+
+        if output['FIPE_link']:
+            output['FIPE'] = fipeitor(output['FIPE_link'])
+
+        # parse the search page using SoupStrainer and lxml
+        strainer = SoupStrainer('head')
+        soup = BeautifulSoup(response.content, 'lxml', parse_only=strainer)
+
+        output['estado'] = soup.find('meta', {'name': 'wm.dt_estado'})['content']
+        output['cidade'] = soup.find('meta', {'name': 'wm.dt_cidade'})['content']
+        output['marca'] = soup.find('meta', {'name': 'wm.dt_marca'})['content']
+        output['modelo'] = soup.find('meta', {'name': 'wm.dt_mod'})['content']
+        output['combustivel'] = soup.find('meta', {'name': 'wm.dt_combustivel'})['content']
+        output['cambio'] = soup.find('meta', {'name': 'wm.dt_cambio'})['content']
+        output['codigo'] = soup.find('meta', {'name': 'wm.dt_codanunc'})['content']
+        output['cor'] = soup.find('meta', {'name': 'wm.dt_cor'})['content']
+        output['preco'] = soup.find('meta', {'name': 'wm.dt_prc'})['content']
+        output['carroceria'] = soup.find('meta', {'name': 'wm.dt_carroceria'})['content']
+        output['anomod'] = soup.find('meta', {'name': 'wm.dt_anomod'})['content']
+        output['tipo'] = soup.find('meta', {'name': 'wm.dt_tipoa'})['content']
+        output['tpag'] = soup.find('meta', {'name': 'wm.tpag'})['content']
+        output['tipoc'] = soup.find('meta', {'name': 'wm.dt_tipoc'})['content']
+
+        unidecodables = ['estado', 'cidade', 'cor', 'modelo', 'carroceria', 'combustivel']
+        for u in unidecodables:
+            output[u] = unidecode(output[u].strip())
+
 
 
     return output
 
+
+
+def get_cars2(urls, filename='./webm/results'):
+    assert isinstance(urls, list)
+    cars = []
+    count = 0
+    for u in urls:
+        carro = requestator_2(u)
+        carro = pd.DataFrame.from_dict(carro, orient='index').T
+        cars.append(carro)
+
+        count += 1
+        if count % 10 == 0 or u == urls[-1]:
+            print count
+            final = pd.concat(cars, axis=0).reset_index(drop=True)
+            # final.to_csv(filename + '.csv', index=False)
+
+            with open(filename + '.csv', 'a') as f:
+                final.to_csv(f, header=False, index=False, sep=';', encoding='utf-8')
+                f.close()
+            cars = []
+
+    return final
 
 # req = soup.find('meta', {'name':'wm.dt_cor'})['content']
 # ss.find('div', {'class': 'pad-oh_gutter-tb pad-l-1 pad-r-1 bg-gray-light2'})
@@ -297,3 +332,12 @@ def requestator_2(url):
 
 # for s in soup.find_all('div', {'class': 'col-3 pad-h_gutter-tb'})[-1]:
 #     s.next_sibiling
+
+######################################
+# import pandas as pd
+# links = pd.read_csv('./webm/links_3.csv', header=None)
+# url = list(links[0])[4]
+#
+# import sys
+# sys.path.append('./webm')
+# import get_cars
