@@ -297,20 +297,25 @@ def get_cars2(urls, filename='./webm/results'):
     cars = []
     count = 0
     for u in urls:
-        carro = requestator_2(u)
-        carro = pd.DataFrame.from_dict(carro, orient='index').T
-        cars.append(carro)
 
-        count += 1
-        if count % 10 == 0 or u == urls[-1]:
-            print count
-            final = pd.concat(cars, axis=0).reset_index(drop=True)
-            # final.to_csv(filename + '.csv', index=False)
+        try:
+            carro = requestator_2(u)
+        except:
+            pass
+        else:
+            carro = pd.DataFrame.from_dict(carro, orient='index').T
+            cars.append(carro)
 
-            with open(filename + '.csv', 'a') as f:
-                final.to_csv(f, header=False, index=False, sep=';', encoding='utf-8')
-                f.close()
-            cars = []
+            count += 1
+            if count % 1000 == 0 or u == urls[-1]:
+                print count
+                final = pd.concat(cars, axis=0).reset_index(drop=True)
+                # final.to_csv(filename + '.csv', index=False)
+
+                with open(filename + '.csv', 'a') as f:
+                    final.to_csv(f, header=False, index=False, sep=';', encoding='utf-8')
+                    f.close()
+                cars = []
 
     return final
 
@@ -341,3 +346,16 @@ def get_cars2(urls, filename='./webm/results'):
 # import sys
 # sys.path.append('./webm')
 # import get_cars
+
+links_csv = './webm/links/links_full.csv'
+import numpy as np
+def links_splitator(links_csv, chunks=8):
+    links = pd.read_csv(links_csv, sep=';', header=None)
+    chunk = np.array_split(np.array(links[0]),chunks)
+
+    count = 1
+    for c in chunk:
+        print pd.DataFrame(c).to_csv('./webm/links/links_' + str(count) + '.csv', sep=';', header=None, index=False)
+        count += 1
+
+    return count
