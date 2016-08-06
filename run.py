@@ -13,5 +13,6 @@ def main(arg1, arg2):
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])
 
-# import os
-# os.system("python run.py ./links/links_4.csv results_4")
+# ipython
+import os
+os.system("python run.py ./links/links_4.csv results_4")

@@ -4,15 +4,18 @@ from bs4 import BeautifulSoup
 from urllib2 import Request, urlopen
 from urllib2 import URLError
 import time
-
-
 from lxml import etree
 import urllib2
 from unidecode import unidecode
+import sys
 
-def get_urls(start=1, n=100, filename='links_1'):
+def get_urls(start=1, n_pag=16921, filename='./links/links_'):
+
+    start = int(start)
+    n_pag = int(n_pag)
+
     lista = []
-    for i in range(1, int(np.round(n / 12, 0))):
+    for i in range(start, n_pag):
         lista.append("http://www.webmotors.com.br/comprar/carros/usados/veiculos-todos-estados/?tipoveiculo=carros&anunciante=concession%C3%A1ria%7Cloja%7Cmontadora%7Cpessoa%20f%C3%ADsica&tipoanuncio=usados&estado1=veiculos-todos-estados&qt=12&o=1&p=" + str(i))
 
     links = []
@@ -38,11 +41,13 @@ def get_urls(start=1, n=100, filename='links_1'):
             links = links + ll
 
             count += 1
-            if count % 100 == 0:
+            print count
+            if count % 100 == 0 or li == lista[-1]:
                 print count
+
                 linkser = pd.Series(links)
 
-                with open(filename + '.csv', 'a') as f:
+                with open(filename + str(start) + 'raw.csv', 'a') as f:
                     linkser.to_csv(f, header=False, index=False)
                 links = []
 
@@ -50,3 +55,10 @@ def get_urls(start=1, n=100, filename='links_1'):
     #linkser.to_csv(filename + '.csv', index=False)
 
     return 'done'
+
+if __name__ == "__main__":
+    get_urls(sys.argv[1], sys.argv[2])
+
+
+# import os
+# os.system("python get_urls.py 1 15")
