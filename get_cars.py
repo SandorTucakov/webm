@@ -307,7 +307,7 @@ def get_cars2(urls, filename='./webm/results'):
             cars.append(carro)
 
             count += 1
-            if count % 1000 == 0 or u == urls[-1]:
+            if count % 1000 == 0:
                 print count
                 final = pd.concat(cars, axis=0).reset_index(drop=True)
                 # final.to_csv(filename + '.csv', index=False)
@@ -316,6 +316,13 @@ def get_cars2(urls, filename='./webm/results'):
                     final.to_csv(f, header=False, index=False, sep=';', encoding='utf-8')
                     f.close()
                 cars = []
+
+
+    final = pd.concat(cars, axis=0).reset_index(drop=True)
+    with open(filename + '.csv', 'a') as f:
+        final.to_csv(f, header=False, index=False, sep=';', encoding='utf-8')
+        f.close()
+
 
     return final
 
